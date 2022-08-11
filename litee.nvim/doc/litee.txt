@@ -1,0 +1,526 @@
+*litee.nvim* litee.nvim
+
+Author:   Louis DeLosSantos <louis.delos@gmail.com>
+Homepage: <https://github.com/ldelossa/litee.nvim>
+License:  MIT license
+
+██╗     ██╗████████╗███████╗███████╗   ███╗   ██╗██╗   ██╗██╗███╗   ███╗
+██║     ██║╚══██╔══╝██╔════╝██╔════╝   ████╗  ██║██║   ██║██║████╗ ████║ Lightweight
+██║     ██║   ██║   █████╗  █████╗     ██╔██╗ ██║██║   ██║██║██╔████╔██║ Integrated
+██║     ██║   ██║   ██╔══╝  ██╔══╝     ██║╚██╗██║╚██╗ ██╔╝██║██║╚██╔╝██║ Text
+███████╗██║   ██║   ███████╗███████╗██╗██║ ╚████║ ╚████╔╝ ██║██║ ╚═╝ ██║ Editing
+╚══════╝╚═╝   ╚═╝   ╚══════╝╚══════╝╚═╝╚═╝  ╚═══╝  ╚═══╝  ╚═╝╚═╝     ╚═╝ Environment
+====================================================================================
+CONTENTS                                                            *litee-contents*
+
+  1     Intro..............................................|litee-intro|
+  2     Usage..............................................|litee-usage|
+  3     Library Modules................................|litee-libraries|  
+  4     lib/details..................................|litee-lib-details|  
+  5     lib/highlights............................|litee-lib-highlights|  
+  6     lib/icons......................................|litee-lib-icons|  
+  7     lib/jumps......................................|litee-lib-jumps|  
+  8     lib/lsp..........................................|litee-lib-lsp|  
+  9     lib/navi........................................|litee-lib-navi|  
+  10    lib/notify......................................|litee-lib-navi|  
+  11    lib/panel......................................|litee-lib-panel|  
+  12    lib/state......................................|litee-lib-state|  
+  13    lib/tree........................................|litee-lib-tree|  
+  14    lib/util........................................|litee-lib-util|  
+  15    lib/term........................................|litee-lib-term|  
+
+====================================================================================
+INTRODUCTION                                                           *litee-intro*
+
+Litee.nvim (pronounced lite) is a library for building "IDE-lite" experience in Neovim. 
+
+By utilizing the "litee" library plugin authors can achieve a consistent experience
+across separate plugins.
+
+There are several official litee plugins which can act as a reference for implementing
+additional.
+
+- Calltree
+https://github.com/ldelossa/litee-calltree
+
+Analogous to VSCode's "Call Hierarchy" tool, this feature exposes an explorable tree
+of incoming or outgoing calls for a given symbol. 
+
+Unlike other Neovim plugins, the tree can be expanded and collapsed to discover 
+"callers-of-callers" and "callees-of-callees" until you hit a leaf.
+
+- Symboltree
+https://github.com/ldelossa/litee-symboltree
+
+Analogous to VSCode's "Outline" tool, this feature exposes a live tree of document
+symbols for the current file. 
+
+The tree is updated as you move around and change files.
+
+- Filetree
+https://github.com/ldelossa/litee-filetree
+
+Analogous to VSCode's "Explorer", this feature exposes a full feature file explorer 
+which supports recursive copies, recursive moves, and proper renaming of a file 
+(more on this in the appropriate section).
+
+====================================================================================
+Usage                                                                  *litee-usage*
+
+Litee.nvim exports a single lua module called "lib".
+
+Inside "lib" are several sub-modules which expose a facility for plugin authors.
+
+Each lib will be covered in detail in their respective sections.
+
+The library itself has a config object which configures each sub-module.
+
+The configuration is structured like so (with defaults).
+>
+    M.config = {
+        icons = {},
+        jumps = {},
+        lsp = {},
+        navi = {},
+        notify = {
+            enabled = true,
+        },
+        panel = {
+            orientation = "left",
+            panel_size = 30,
+        },
+        state = {},
+        tree = {
+            icon_set = "default",
+            indent_guides = true
+        }
+    }
+<
+Each key of the configuration corresponds to a library sub-module.
+
+You can apply configuration to litee/lib by way of it's setup method found
+in litee/lib/init.lua, for example:
+>
+    require('litee.lib').setup({
+        tree = {
+            icon_set = "codicons"
+        },
+        panel = {
+            orientation = "top",
+            panel_size  = 15
+        }
+    })
+<
+The above overrides the default configuration options for the icon_set used in the
+tree sub-module and changes the panel sub-module's orientation and size.
+
+Example for custom icons:
+>
+    -- Provide a custom icon_set which will be merged with the default icon_set.
+    require('litee.lib').setup{
+        tree = { icon_set_custom = { Struct = "s" } }
+    }
+
+    -- You can even copy, paste the icon_set in `lib/icons/init.lua`, then
+    -- modify it and pass it to `icon_set_custom`.
+    local icon_set_custom = { ... }
+    require('litee.lib').setup{
+        tree = { icon_set_custom = icon_set_custom }
+    }
+
+    -- Provide a custom icon_set which will be merged with the specified icon_set
+    -- from `lib/icons/init.lua` by name.
+    require('litee.lib').setup{
+        tree = { icon_set_custom = { Struct = "s" }, icon_set = "codicons" }
+    }
+<
+====================================================================================
+lib/details                                                      *litee-lib-details*
+
+The `details` library exports a consistent way to display and close a details
+pop up window.
+
+The contents of the `details` pop-up is provided by a `detail_func` passed
+into the `details_popup` function. 
+
+Thus, the caller can determine what the details are for a particular node or 
+plugin element.
+
+The `details` object was designed to be used with a tree node, however passing
+in any type for the "node" argument will work as long as the associated "detail_func"
+can parse the object and spit out a set of buffer lines.
+
+Use `close_details_popup()` to close the pop-up.
+
+====================================================================================
+lib/highlights                                                *litee-lib-highlights*
+
+The `highlights` library defines the highlights used within the `litee` library,
+methods for setting up the default highlights, and a sub-module for the 
+auto-highlights features.
+
+The following highlights are exported and can be defined for theme overriding.
+>
+    M.hls = {
+        SymbolDetailHL      = "LTSymbolDetail",
+        SymbolHL            = "LTSymbol",
+        SymbolJumpHL        = "LTSymbolJump",
+        SymbolJumpRefsHL    = "LTSymbolJumpRefs",
+        IndentGuideHL       = "LTIndentGuide",
+        ExpandedGuideHL     = "LTExpandedGuide",
+        CollapsedGuideHL    = "LTCollapsedGuide",
+        SelectFiletreeHL    = "LTSelectFiletree"
+    }
+<
+The `auto` module provides a facility for highlighting areas of a source file
+given a node and a window. 
+
+TODO: The `auto` module should not rely on "lib_util.resolve_absolute_file_path" 
+and "lib_util.resolve_location", as these methods require us to understand the 
+types of "node" a head of time. 
+
+====================================================================================
+lib/icons                                                          *litee-lib-icons*
+
+The `icons` library defines and exports icon sets which plugin authors may use
+for a consistent experience. 
+
+Currently `codicons` and `nerd` and "default" icons are exported.
+
+The "default" icon set only supplies the stock UTF-8 icons necessary to display
+litee's UI such as indent guides and tree symbols.
+
+Users of this library can override the exported icon libraries during runtime to
+change an icon from its default.
+
+This library also exports a list of icon highlights which can be overriden.
+
+Check out the source file `lib/icons/init.lua` for full details.
+
+====================================================================================
+lib/jumps                                                          *litee-lib-jumps*
+
+The `jumps` library defines and exports functions which perform source file jumps
+to a specific "location" object. 
+
+The "location" object is specified by the LSP, see: 
+https://microsoft.github.io/language-server-protocol/specifications/specification-current/#location
+
+Highlights can be set within the jumped-to source window and can be cleared with the `set_jump_hl`
+method.
+
+TODO: refactor jumps library to no longer need "lib_util.resolve_location" - all location details
+should be passed in.
+
+====================================================================================
+lib/lsp                                                              *litee-lib-lsp*
+
+The `lsp` library holds methods specific to interacting with the native LSP 
+library. 
+
+This includes helpers for making various LSP requests, wrappers for LSP methods
+and a library for creating Hover pop-ups.
+
+This is the library to use or contribute to if you need to interface with 
+Neovim's native LSP libraries.
+
+====================================================================================
+lib/navi                                                            *litee-lib-navi*
+
+The `navi` library is small and exports methods for progressing a cursor forward
+or backwards in a window which is registered with litee. 
+
+Two callbacks exist to perform actions before and after the cursor move. 
+See source file for details.
+
+See `litee-lib-panel` for information on registration.
+
+====================================================================================
+lib/notify                                                          *litee-lib-notify*
+
+The `notify` library produces pop-up notifications at the top right corner
+of the editor.
+
+Methods exist to create both persistent notifications and ones with configurable
+timeouts, along with methods to close all notifications.
+
+Currently, notifications stack on top of each other so only one is visible at a time.
+
+====================================================================================
+lib/panel                                                          *litee-lib-panel*
+
+The `panel` library provides a consistent panel experience across plugins which
+utilizes the `litee.nvim` library. 
+
+The panel is akin to panels in JetBrains and VSCode IDEs. 
+
+For a plugin to integrate with the panel it must register itself with the panel
+and it also must utilize "lib/state" to store its runtime state.
+
+Runtime state holds information about a registered plugins windows, tab, buffer, 
+etc, and is formally defined in `lib/state`
+
+To register a plugin with the panel the `litee.lib.panel.register_component` method
+must be used. 
+
+This method requires a `pre_window_create` callback and optionally takes a 
+`post_window_create` callback. 
+
+The `pre_window_create` callback must create a buffer for the plugin being 
+registered and write the buffer ID into the plugin's component state, which is 
+an argument to this callback. The plugin is free to perform any other actions 
+associated with displaying its window, such as setting up autocommands or buffer options.
+
+The `post_window_create` method is optional and when called Neovim is inside the 
+newly created window within the panel. The plugin is free to perform any in-window
+manipulations such as setting syntax highlights or window options. 
+
+The panel also supports a feature dubbed "PopOut" panels. 
+
+"PopOut" panels are floating windows which act as if you're "popping out" the 
+panel window to a float, and will "pop" back into the panel when closed. 
+This is convenient for "zooming" into panel windows. 
+
+Additionally, the panel need not be visible for a "PopOut" panel to be displayed.
+Meaning, users of `litee.nvim` do not necessary need to interface with the panel, 
+and can use only "PopOut" panels if they prefer, tho the plugin has to facilitate 
+this by calling the right `lib/panel` api functions.
+
+For more info on "PopOut" panels see the "popout_to" function in `litee.lib.panel`.
+
+The rest of the API footprint exists to display/hide/jump into the panel. 
+See the source code for full details.
+
+====================================================================================
+lib/state                                                          *litee-lib-state*
+
+The `state` library provides a library for handling plugin state.
+
+Litee must keep track of when components (plugins) are displayed in the panel, 
+if their windows are valid, if they have an associated tree handle, whether their
+buffer is valid, etc... 
+
+Likewise, plugins need a way to retrieve and store their own state in between 
+function calls.
+
+The `state` library acts a registry for this state and makes it retrievable both
+globally and by components.
+
+A component should only mutate its own state, unless it positively knows what 
+its doing. 
+
+The state structure looks as follows:
+>
+  {
+      "componentA" = {
+          buf = 0,
+          win = 0,
+          tab = 0,
+          tree = 0,
+          win_dimensions = {0, 0},
+          invoking_win = 0,
+          active_lsp_clients = {list of lsp clients},
+          (component specific fields)...
+      },
+      "componentB" = {
+          buf = 0,
+          win = 0,
+          tab = 0,
+          tree = 0,
+          win_dimensions = {0, 0},
+          invoking_win = 0,
+          active_lsp_clients = {list of lsp clients},
+          (component specific fields)...
+      }
+  }
+<
+When functions expect the full state the function parameter is typically "state" and when
+functions expect a component's stat (state["componentA"] for example) the parameter
+is typically "component_state". 
+
+Ideally all of a plugin's methods which interface with litee require a "component_state", 
+and they should only touch their own state.
+
+Accessors methods for both global and component state exist in `lib/state` along with methods
+to write both types of state back to the registry.
+
+Neovim is single threaded and tables are references, so its actually pretty uncommon to
+write state back into the registry. The exception is when setting the initial component
+state table in the global state table, performed by `put_component_state`
+
+`lib/state.lua` exports some helpful methods such as getting the component type for
+a particular buffer ID. Like always, until I have time to document better, check out the
+source for full details.
+
+====================================================================================
+lib/tree                                                            *litee-lib-tree*
+
+The `tree` library implements a reusable tree which supports the expansion and 
+collapsing of nodes. 
+
+A node in the tree has a core data structure which a plugin can tag on plugin-specific
+data on. 
+
+A node looks as follows and can be instantiated with the "lib.tree.node.new_node()"
+method.
+>
+  {
+      -- a non-unique display name for the node
+      name = name,
+      -- the depth of the node in the target tree
+      depth = depth,
+      -- a unique key used to identify the node when
+      -- placed into a tree
+      key = key,
+      -- a list of children nodes with recursive definitions.
+      children = {},
+      -- whether this node is expanded in its containing
+      -- tree.
+      expanded = false,
+  }
+<
+Its the caller's job to define each value ensuring the key for the node is unique within
+the tree being built. 
+
+The `tree` lib itself is a registry where you request a tree and get back a handle to it.
+
+The handle can be stored on a plugin's state object and stored in `lib/state` and it also
+passed to `lib/tree` methods to identify which tree is being acted upon.
+
+The data structure which represents a tree looks like this:
+`{root = {}, depth_table = {}, kind = "", source_line_map = nil, buf_line_map = nil}`
+
+Where root is an empty root node, depth_table is a flattened 2d array containing a list of nodes
+at a particular depth of the tree (useful for quick lookups), kind is the kind of tree defined
+by the caller, source_line_map is a mapping from a source code line to a node in the tree, and
+buf_line_map is a mapping from a buffer line in the tree to a source code line.
+
+source_line_map can only be realized if your node has a top level "location" key with an LSP
+specified `location` structure as its value. 
+
+Both aforementioned maps make it possibe to map items in the tree to source code lines and 
+vice versa. The best way to understand this is looking at the reference implementations of
+"litee-filetree", "litee-calltree", and "litee-symboltree".
+
+Once a tree is created you can begin building its nodes. 
+
+A tree is build by creating a root node and then a list of children.
+
+For convenience, the `add_node` function will take a root and a list of children,
+compute the children's depth, attach the children to the root, and add it to the tree.
+
+It's important to understand that by using the `add_node` without further options, you
+do not need to worry about the children node's depth fields, but you DO need to always
+set the root's depth field.
+
+When the `add_node` method receives a root node with its depth field of 0 it throws
+away the old tree and creates a new one. 
+
+When the `add_node` method receives a root node with a depth greater then zero it can
+compute its children's depths and will add this new root (of a sub-tree) to the existing
+tree at the appropriate depth.
+
+Sometimes, the caller wants to build the entire tree with their own business logic and
+simply use the `tree` library for marshaling into a Neovim buffer and other facilities 
+such as expand and collapsing. If this is the case you can use the `external` flag 
+to the 'add_node' method. 
+
+When the `add_node` method sees the external flag is set to true, it performs no 
+actions on the root and simply adds it to the tree structure outlined above. The
+`children` parameter is completely ignored.
+
+Once the tree is built and all the desired nodes are added, you can write the tree
+to a buffer with the "write_tree" method. 
+
+`function M.write_tree(buf, tree, marshal_func, no_guide_leaf)`
+
+The write_tree method takes a buffer ID to write too, a tree ID to write, a marshal_func
+which is called for each node and returns the necessary strings which will make up the 
+buffer line in the tree, and a "no_guide_leaf" flag. See the method's documentation
+for marshal_func details.
+
+The `no_guide_leaf` flag tells the `write_tree` method that when a node is expanded,
+and it has no children, leave off the "expanded" guide (the down arrow showing its expanded). 
+
+This is a nice effect for some trees and a helper method exists if your plugin will always
+use this method `function M.write_tree_no_guide_leaf(buf, tree, marshal_func)`. 
+
+Make note, the `write_tree` function can only determine a leaf *after* the node is expanded,
+for example, a node is collapsed, you expand it, it has no children, no expanded guide is shown.
+
+There are times where the caller can determine an item is a leaf *before* its expanded, for example,
+in a file tree, we know a regular file does not need an expand guide. 
+
+To accomplish this the `marshal_func` suports returning an override for the expand guide as its 
+very last argument. If returned, this symbol is used instead of the expand guide `write_tree` 
+would use on its own accord. `litee-filetree` uses this to simply return a " " when it sees
+a regular file.
+
+There is a method, `function M.marshal_line(linenr, handle)', which takes a tree buffer's linenr
+and a tree handle and returns the corresponding node.
+
+A small note on the depth_table. A depth_table is a flattened 2d array which hold a list of nodes
+at a particular depth. This makes getting nodes at a particular depth very easy and (maybe...?) 
+faster then a tree traversal. A depth_table is available after any initial and all subsequent
+`add_node` calls.
+
+Various methods exist in the library for manipulating the tree such as collapsing nodes and 
+removing subtrees. Take a look at the source code to see what is available.
+
+====================================================================================
+lib/util                                                            *litee-lib-util*
+
+Lib `util` is a dumping ground for various helper functions and utilities. 
+
+Lib `util` exports several helpful sub-libraries. 
+
+`lib.util.window` For helper functions around Neovim windows
+`lib.util.buffer` For helper functions around Neovim buffers
+`lib.util.path`   For helper functions dealing with file system paths (only linux right now.)
+
+====================================================================================
+lib/term                                                            *litee-lib-term*
+
+Lib `term` exports a method for opening a Neovim native terminal that is aware
+of `litee.nvim` environment. 
+
+This terminal can be opened on the top or bottom and is controlled by the "term"
+configuration block in the `lib.config` module.
+
+>
+    term = {
+        -- can be  "top" or "bottom"
+        position = "bottom",
+        -- the initial size of the terminal
+        term_size = 15,
+        -- if true maps arrow keys to window resize
+        -- commands.
+        map_resize_keys = true,
+    },
+<
+
+The terminal creates two "terminal" mode key bindings. 
+>
+    vim.api.nvim_buf_set_keymap(buf, 't', "<C-w>v", "<cmd>lua require('configs.terminal').terminal_vsplit()<cr>", opts)
+
+    vim.api.nvim_buf_set_keymap(buf, 't', "<C-w>n", "<C-\\><C-n>", opts)
+
+    vim.api.nvim_buf_set_keymap(buf, 't', "<C-w>h", "<C-\\><C-n> <C-w>h", opts)
+    vim.api.nvim_buf_set_keymap(buf, 't', "<C-w>j", "<C-\\><C-n> <C-w>j", opts)
+    vim.api.nvim_buf_set_keymap(buf, 't', "<C-w>k", "<C-\\><C-n> <C-w>k", opts)
+    vim.api.nvim_buf_set_keymap(buf, 't', "<C-w>l", "<C-\\><C-n> <C-w>l", opts)
+<
+The first one will open another terminal in a vsplit relative to the terminal you're issuing
+the command in.
+
+The second is a helper that puts your terminal back into normal mode. 
+
+The final set are short-cuts for jumping out of the terminal into other windows.
+
+Be aware, these mappins will only work when your Vim mode is "terminal" which is when
+input is being forwarded directly to the shell. If you are in normal mode (the shell is just
+a buffer of lines at that point) the mappins will revert back to normal mode mappings.
+
+The term can be triggered open with the "LTTerm" user command.
+
+vim:ft=help
